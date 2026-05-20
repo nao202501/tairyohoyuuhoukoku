@@ -23,6 +23,10 @@ WATCHLIST_SEC_CODES = {
 }
 WATCHLIST_DOC_KEYWORDS = ["有価証券報告書", "半期報告書"]
 
+# === TDnet監視（招集通知・株主総会資料等） ===
+TDNET_TARGET_CODES = ["4022", "4461", "5989", "6227", "378A"]
+TDNET_TARGET_KEYWORDS = ["招集通知", "株主総会"]
+
 # 既通知docIDのキャッシュ（GitHub Actionsならアーティファクトに保存）
 SEEN_FILE = "seen_docs.json"
 
@@ -38,6 +42,29 @@ def fetch_edinet_documents(date_str):
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
     return r.json().get("results", [])
+
+
+def fetch_tdnet_documents():
+    """ウォッチリスト銘柄のTDnet適時開示を取得（やのしんAPI経由）"""
+    codes_str = "-".join(TDNET_TARGET_CODES)
+    url = f"https://webapi.yanoshin.jp/webapi/tdnet/list/{codes_str}.json"
+    params = {"limit": 100}
+    try:
+        r = requests.get(url, params=params, timeout=30)
+        r.raise_for_status()
+        return r.json().get("items", [])
+    except Exception as e:
+        print(f"TDnet API error: {e}")
+        return []
+
+
+def is_tdnet_target(item):
+    """招集通知等の対象書類か判定"""
+    tdnet = item.get("Tdnet", {})
+    title = tdnet.get("title", "") or ""
+    if "訂正" in title:
+        return False
+    return any(kw in title for kw in TDNET_TARGET_KEYWORDS)
 
 
 def is_katayama_filing(doc):
@@ -148,8 +175,36 @@ def main():
         notify_discord(msg)
         notify_line(msg)
 
+    # === TDnetスキャン ===
+    tdnet_new = 0
+    for item in fetch_tdnet_documents():
+        tdnet = item.get("Tdnet", {})
+        tdnet_id = tdnet.get("id")
+        if not tdnet_id or tdnet_id in seen:
+            continue
+        if not is_tdnet_target(item):
+            continue
+
+        company_code = tdnet.get("company_code", "")
+        company_name = tdnet.get("company_name", "")
+        title = tdnet.get("title", "")
+        pubdate = tdnet.get("pubdate", "")
+        doc_url = tdnet.get("document_url") or tdnet.get("url", "")
+
+        msg = (
+            f"📢 TDnet開示: {company_name}（{company_code}）\n"
+            f"タイトル: {title}\n"
+            f"公開日時: {pubdate}\n"
+            f"URL: {doc_url}"
+        )
+        print(msg)
+        notify_discord(msg)
+        notify_line(msg)
+        seen.add(tdnet_id)
+        tdnet_new += 1
+
     save_seen(seen)
-    print(f"Scanned {len(dates_to_check)} days, {len(new_hits)} new hits")
+    print(f"Scanned {len(dates_to_check)} days, {len(new_hits)} EDINET hits, {tdnet_new} TDnet hits")
 
 
 if __name__ == "__main__":
