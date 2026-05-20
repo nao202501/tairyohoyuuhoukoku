@@ -9,11 +9,19 @@ DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK")  # Discord使う場合
 LINE_TOKEN = os.environ.get("LINE_TOKEN")            # LINE使う場合
 LINE_USER_ID = os.environ.get("LINE_USER_ID")        # LINE使う場合
 
-# 監視対象の人物名（部分一致）
+# === 片山氏監視 ===
 TARGET_NAMES = ["片山晃", "片山 晃"]
-
-# 監視対象の書類（docDescriptionに含まれる文字列）
 TARGET_DOC_KEYWORDS = ["大量保有報告書", "変更報告書"]
+
+# === ウォッチリスト銘柄監視 ===
+WATCHLIST_SEC_CODES = {
+    "40220": "ラサ工業",
+    "44610": "第一工業製薬",
+    "59890": "エイチワン",
+    "62270": "AIメカテック",
+    "378A0": "ヒット",
+}
+WATCHLIST_DOC_KEYWORDS = ["有価証券報告書", "半期報告書"]
 
 # 既通知docIDのキャッシュ（GitHub Actionsならアーティファクトに保存）
 SEEN_FILE = "seen_docs.json"
@@ -32,14 +40,30 @@ def fetch_edinet_documents(date_str):
     return r.json().get("results", [])
 
 
-def is_target_filing(doc):
-    """片山氏の大量保有/変更報告書かを判定"""
+def is_katayama_filing(doc):
+    """片山氏の大量保有/変更報告書か"""
     filer = doc.get("filerName", "") or ""
     desc = doc.get("docDescription", "") or ""
-
+    if "訂正" in desc:
+        return False
     name_match = any(name in filer for name in TARGET_NAMES)
     doc_match = any(kw in desc for kw in TARGET_DOC_KEYWORDS)
     return name_match and doc_match
+
+
+def is_watchlist_filing(doc):
+    """ウォッチリスト銘柄の有報・半期報告書か"""
+    sec_code = doc.get("secCode", "") or ""
+    desc = doc.get("docDescription", "") or ""
+    if "訂正" in desc:
+        return False
+    code_match = sec_code in WATCHLIST_SEC_CODES
+    doc_match = any(kw in desc for kw in WATCHLIST_DOC_KEYWORDS)
+    return code_match and doc_match
+
+
+def is_target_filing(doc):
+    return is_katayama_filing(doc) or is_watchlist_filing(doc)
 
 
 def load_seen():
@@ -103,12 +127,19 @@ def main():
 
     for doc in new_hits:
         doc_id = doc.get('docID')
+        sec_code = doc.get('secCode') or ''
+        company_label = WATCHLIST_SEC_CODES.get(sec_code, '')
+
+        if is_katayama_filing(doc):
+            header = "🚨 片山晃氏のEDINET開示"
+        else:
+            header = f"📊 ウォッチリスト銘柄の開示: {company_label}（{sec_code[:4]}）"
+
         msg = (
-            f"🚨 片山晃氏のEDINET開示\n"
+            f"{header}\n"
             f"書類: {doc.get('docDescription')}\n"
             f"提出者: {doc.get('filerName')}\n"
-            f"対象企業EDINETコード: {doc.get('issuerEdinetCode') or '（記載なし）'}\n"
-            f"対象証券コード: {doc.get('secCode') or '（記載なし）'}\n"
+            f"証券コード: {sec_code or '（記載なし）'}\n"
             f"提出日時: {doc.get('submitDateTime')}\n"
             f"docID: {doc_id}\n"
             f"EDINETで検索: https://disclosure2.edinet-fsa.go.jp/"
