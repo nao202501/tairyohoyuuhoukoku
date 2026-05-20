@@ -102,13 +102,16 @@ def main():
                 seen.add(doc_id)
 
     for doc in new_hits:
+        doc_id = doc.get('docID')
         msg = (
             f"🚨 片山晃氏のEDINET開示\n"
             f"書類: {doc.get('docDescription')}\n"
-            f"発行体: {doc.get('filerName')} / 証券コード: {doc.get('secCode')}\n"
+            f"提出者: {doc.get('filerName')}\n"
+            f"対象企業EDINETコード: {doc.get('issuerEdinetCode') or '（記載なし）'}\n"
+            f"対象証券コード: {doc.get('secCode') or '（記載なし）'}\n"
             f"提出日時: {doc.get('submitDateTime')}\n"
-            f"EDINET: https://disclosure2.edinet-fsa.go.jp/WEEK0040.aspx?"
-            f"S100Dat=&S100SD={doc.get('docID')}"
+            f"docID: {doc_id}\n"
+            f"EDINETで検索: https://disclosure2.edinet-fsa.go.jp/"
         )
         print(msg)
         notify_discord(msg)
