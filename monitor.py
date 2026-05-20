@@ -81,7 +81,7 @@ def main():
     # 今日と昨日をスキャン(土日の取りこぼし防止)
     jst = timezone(timedelta(hours=9))
     today = datetime.now(jst).date()
-    dates_to_check = [datetime(2026, 2, 2).date()]
+    dates_to_check = [today, today - timedelta(days=1)]
 
     seen = load_seen()
     new_hits = []
