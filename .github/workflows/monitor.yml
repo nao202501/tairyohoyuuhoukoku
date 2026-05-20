@@ -1,0 +1,33 @@
+name: EDINET Monitor
+
+on:
+  schedule:
+    # JST 平日 15:00-18:30 に5分おき (UTCで06:00-09:30)
+    - cron: '*/5 6-9 * * 1-5'
+  workflow_dispatch:  # 手動実行も可能に
+
+permissions:
+  contents: write  # seen_docs.json をコミットするため
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python monitor.py
+        env:
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+      - name: Commit seen cache
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_docs.json || true
+          git commit -m "Update seen cache" || true
+          git push || true
