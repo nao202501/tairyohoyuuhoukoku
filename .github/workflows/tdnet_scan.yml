@@ -1,0 +1,31 @@
+name: TDnet Full Scan
+
+on:
+  schedule:
+    # JST 平日 19:00 (UTCで10:00)
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python tdnet_scan.py
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Commit seen cache
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_tdnet_zenken.json || true
+          git commit -m "Update TDnet zenken cache" || true
+          git push || true
