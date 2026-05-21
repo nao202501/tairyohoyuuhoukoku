@@ -37,9 +37,17 @@ def fetch_edinet_today():
 
 
 def is_hanki_houkokusho(doc):
-    """半期報告書か判定（訂正は除外）"""
+    """半期報告書か判定（訂正・投資信託は除外、上場会社のみ）"""
     desc = doc.get("docDescription", "") or ""
+    sec_code = doc.get("secCode", "") or ""
+    
     if "訂正" in desc:
+        return False
+    # 上場会社（証券コードあり）のみを対象にする
+    if not sec_code:
+        return False
+    # 念のため投資信託キーワードも除外
+    if "投資信託" in desc or "ファンド" in desc:
         return False
     return TARGET_DOC_KEYWORD in desc
 
