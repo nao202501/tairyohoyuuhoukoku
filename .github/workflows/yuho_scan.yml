@@ -1,0 +1,32 @@
+name: Hanki Houkokusho Full Scan
+
+on:
+  schedule:
+    # JST 平日 19:30 (UTCで10:30) — TDnetスキャンと30分ずらす
+    - cron: '30 10 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python yuho_scan.py
+        env:
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Commit seen cache
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_hanki_zenken.json || true
+          git commit -m "Update hanki zenken cache" || true
+          git push || true
