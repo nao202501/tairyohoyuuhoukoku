@@ -25,7 +25,8 @@ WATCHLIST_DOC_KEYWORDS = ["有価証券報告書", "半期報告書"]
 
 # === TDnet監視（招集通知・株主総会資料等） ===
 TDNET_TARGET_CODES = ["4022", "4461", "5989", "6227", "378A"]
-TDNET_TARGET_KEYWORDS = ["招集通知", "株主総会"]
+TDNET_TARGET_KEYWORDS = ["招集", "株主総会", "事業報告"]
+
 
 # 既通知docIDのキャッシュ（GitHub Actionsならアーティファクトに保存）
 SEEN_FILE = "seen_docs.json"
