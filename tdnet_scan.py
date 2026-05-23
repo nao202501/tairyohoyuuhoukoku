@@ -22,13 +22,17 @@ END_SECTION_MARKERS = [
 
 
 def fetch_tdnet_today():
-    """今日のTDnet全開示を取得"""
+    """指定日範囲のTDnet全開示を取得"""
     jst = timezone(timedelta(hours=9))
-    today = datetime.now(jst).strftime("%Y%m%d")
-    url = f"https://webapi.yanoshin.jp/webapi/tdnet/list/{today}.json"
-    params = {"limit": 1000}
+    today = datetime.now(jst).date()
+    yesterday = today - timedelta(days=1)
+    # 範囲指定: 過去2日分をスキャン
+    start = yesterday.strftime("%Y%m%d")
+    end = today.strftime("%Y%m%d")
+    url = f"https://webapi.yanoshin.jp/webapi/tdnet/list/{start}-{end}.json"
+    params = {"limit": 5000}
     try:
-        r = requests.get(url, params=params, timeout=30)
+        r = requests.get(url, params=params, timeout=60)
         r.raise_for_status()
         return r.json().get("items", [])
     except Exception as e:
