@@ -11,7 +11,8 @@ from pypdf import PdfReader
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK")
 TARGET_NAMES = ["片山晃", "片山 晃"]
 SEEN_FILE = "seen_tdnet_zenken.json"
-TARGET_KEYWORDS = ["招集通知"]
+TARGET_KEYWORDS = ["招集", "株主総会", "事業報告"]
+
 MAJOR_SHAREHOLDERS_MARKERS = ["大株主の状況", "大株主の状況等"]
 END_SECTION_MARKERS = [
     "議決権の状況", "従業員の状況", "ストックオプション",
