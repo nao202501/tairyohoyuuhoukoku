@@ -12,17 +12,21 @@ QUERY = '(from:riorio1412 OR from:stock_unknown) ("片山晃" OR "五月さん")
 
 
 def search_tweets():
+    from urllib.parse import urlencode, quote
     url = "https://api.twitter.com/2/tweets/search/recent"
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
     params = {
         "query": QUERY,
-        "max_results": 10,
+        "max_results": "10",
         "tweet.fields": "created_at,author_id,text",
         "expansions": "author_id",
         "user.fields": "username,name",
     }
+    # 日本語を正しくURLエンコードするために手動でクエリ文字列を構築
+    query_string = urlencode(params, quote_via=quote)
+    full_url = f"{url}?{query_string}"
     try:
-        r = requests.get(url, headers=headers, params=params, timeout=30)
+        r = requests.get(full_url, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.HTTPError as e:
@@ -32,6 +36,7 @@ def search_tweets():
     except Exception as e:
         print(f"X API error: {e}")
         return {}
+
 
 
 def load_seen():
