@@ -1,0 +1,36 @@
+name: X Katayama Monitor
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install requests
+      
+      - name: Run X monitor
+        env:
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python x_katayama_monitor.py
+      
+      - name: Commit seen cache
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_x_tweets.json || true
+          git commit -m "Update X seen cache" || true
+          git push || true
