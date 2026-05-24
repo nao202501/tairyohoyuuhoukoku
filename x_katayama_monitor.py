@@ -12,30 +12,57 @@ QUERY = '(from:riorio1412 OR from:stock_unknown) ("片山晃" OR "五月さん")
 
 
 def search_tweets():
-    from urllib.parse import urlencode, quote
+    from urllib.parse import quote
+    import traceback
+    
     url = "https://api.twitter.com/2/tweets/search/recent"
+    
+    # トークンの診断
+    print(f"DEBUG: トークン長さ = {len(BEARER_TOKEN) if BEARER_TOKEN else 0}")
+    if BEARER_TOKEN:
+        non_ascii_chars = [c for c in BEARER_TOKEN if ord(c) >= 128]
+        if non_ascii_chars:
+            print(f"⚠️ トークンに非ASCII文字が含まれています: {non_ascii_chars[:5]}")
+        else:
+            print(f"DEBUG: トークンはすべてASCII（OK）")
+    
     headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
-    params = {
-        "query": QUERY,
-        "max_results": "10",
-        "tweet.fields": "created_at,author_id,text",
-        "expansions": "author_id",
-        "user.fields": "username,name",
-    }
-    # 日本語を正しくURLエンコードするために手動でクエリ文字列を構築
-    query_string = urlencode(params, quote_via=quote)
-    full_url = f"{url}?{query_string}"
+    
+    # 手動でクエリを完全にURLエンコード
+    encoded_query = quote(QUERY, safe='')
+    
+    full_url = (
+        f"{url}"
+        f"?query={encoded_query}"
+        f"&max_results=10"
+        f"&tweet.fields=created_at,author_id,text"
+        f"&expansions=author_id"
+        f"&user.fields=username,name"
+    )
+    
+    # URLがすべてASCIIか確認
+    try:
+        full_url.encode('ascii')
+        print(f"DEBUG: URL はすべてASCII（OK）")
+    except UnicodeEncodeError as e:
+        print(f"⚠️ URL に非ASCII文字が残っています: {e}")
+        return {}
+    
+    print(f"DEBUG: 完全URL（最初250文字）: {full_url[:250]}")
+    
     try:
         r = requests.get(full_url, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.HTTPError as e:
-        print(f"X API HTTP error: {e}")
-        print(f"Response: {r.text}")
+        print(f"X API HTTPエラー: {e}")
+        print(f"レスポンス: {r.text}")
         return {}
     except Exception as e:
-        print(f"X API error: {e}")
+        print(f"X API エラー: {e}")
+        print(f"トレースバック:\n{traceback.format_exc()}")
         return {}
+
 
 
 
