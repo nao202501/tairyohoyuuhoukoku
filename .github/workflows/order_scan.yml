@@ -6,6 +6,12 @@ on:
     # order_events.json を最新化する
     - cron: '0 9 * * 1-5'
   workflow_dispatch:
+    inputs:
+      test:
+        description: "DISCORD_WEBHOOK_ORDERSの疎通確認のみ行う(TDnetスキャンはスキップ)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,10 +26,16 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install requests
-      - run: python order_scan.py
+      - run: |
+          if [ "${{ github.event.inputs.test }}" = "true" ]; then
+            python order_scan.py --test
+          else
+            python order_scan.py
+          fi
         env:
           DISCORD_WEBHOOK_ORDERS: ${{ secrets.DISCORD_WEBHOOK_ORDERS }}
       - name: Commit order events
+        if: github.event.inputs.test != 'true'
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"

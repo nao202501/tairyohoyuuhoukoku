@@ -9,6 +9,7 @@ kessan-surprise(決算サプライズ発掘システム)の S2c シグナル(SPE
 - ログ: data/order_events.json に {code(4桁), title, disclosed_at, url} を追記
 """
 import os
+import sys
 import json
 import requests
 from datetime import datetime, timedelta, timezone
@@ -81,15 +82,42 @@ def save_events(events):
 
 
 def notify_discord(message):
+    """DISCORD_WEBHOOK_ORDERS へ送信。戻り値で成否を返す(疎通確認用に呼び出し元でログ出力する)。"""
     if not DISCORD_WEBHOOK_ORDERS:
-        return
+        print("DISCORD_WEBHOOK_ORDERS が未設定です。")
+        return False
     try:
-        requests.post(DISCORD_WEBHOOK_ORDERS, json={"content": message}, timeout=10)
+        r = requests.post(DISCORD_WEBHOOK_ORDERS, json={"content": message}, timeout=10)
+        if r.status_code >= 300:
+            print(f"Discord error: HTTP {r.status_code} {r.text[:200]}")
+            return False
+        return True
     except Exception as e:
         print(f"Discord error: {e}")
+        return False
+
+
+def run_test_notification():
+    """DISCORD_WEBHOOK_ORDERS の疎通確認のみ行う(TDnetスキャンは実行しない)。
+
+    workflow_dispatch の test 入力から呼ばれる。実際の検知処理を経由せず、
+    Webhookの登録有無・宛先チャンネルの疎通を素早く確認できるようにする。
+    """
+    msg = (
+        "[受注] テスト通知: DISCORD_WEBHOOK_ORDERS の疎通確認です。"
+        "この通知が見えていれば設定は正しく機能しています。"
+        "(order_scan.py --test より送信、実際の受注検知ではありません)"
+    )
+    print(msg)
+    ok = notify_discord(msg)
+    print(f"Discord送信結果: {'成功' if ok else '失敗またはWebhook未設定'}")
+    return 0 if ok else 1
 
 
 def main():
+    if "--test" in sys.argv:
+        return run_test_notification()
+
     items = fetch_tdnet_recent()
     seen = load_seen()
     events = load_events()
@@ -132,7 +160,8 @@ def main():
         save_events(events)
     save_seen(seen)
     print(f"完了: 新規受注イベント {new_count} 件（累計 {len(events)} 件）")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
