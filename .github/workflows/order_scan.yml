@@ -1,0 +1,32 @@
+name: Order Disclosure Scan
+
+on:
+  schedule:
+    # JST 平日 18:00 (UTCで09:00)。kessan-surprise の日次実行(18:30 JST)より前に
+    # order_events.json を最新化する
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - run: python order_scan.py
+        env:
+          DISCORD_WEBHOOK_ORDERS: ${{ secrets.DISCORD_WEBHOOK_ORDERS }}
+      - name: Commit order events
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_order_docs.json data/order_events.json || true
+          git commit -m "Update order events" || true
+          git push || true
