@@ -1162,5 +1162,17 @@
   "title": "大型案件の受注に関するお知らせ",
   "disclosed_at": "2026-07-31",
   "url": "https://webapi.yanoshin.jp/rd.php?https://www.release.tdnet.info/inbs/140120260731505307.pdf"
+ },
+ {
+  "code": "6239",
+  "title": "子会社による大口受注に関するお知らせ",
+  "disclosed_at": "2026-08-07",
+  "url": "https://webapi.yanoshin.jp/rd.php?https://www.release.tdnet.info/inbs/140120260807513707.pdf"
+ },
+ {
+  "code": "6227",
+  "title": "大手半導体関連メーカーより大口受注のお知らせ",
+  "disclosed_at": "2026-08-07",
+  "url": "https://webapi.yanoshin.jp/rd.php?https://www.release.tdnet.info/inbs/140120260806512861.pdf"
  }
 ]
